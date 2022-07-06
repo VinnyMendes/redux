@@ -1,55 +1,80 @@
 import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { bindActionCreators } from 'redux'
 import './App.css';
-import { connect, useDispatch } from 'react-redux';
-import { bindActionCreators } from 'redux';
 
-import { fetchProductsThunk, filterProductsThunk } from './store/actions/produtcts.action'
+import { connect } from 'react-redux';
+import { fetchProductsThunk, filterProductsThunk, fetchProductsStarted } from './store/actions/products.action'
 
-function App({products, isFetching, errorMessage, fetchProductsThunk: any, filterProductsThunk} :any) {
-  const dispatch = useDispatch()
-
-  const [estadoInput, setEstadoInput] = useState('')
-
-  useEffect(()=>{
-    // console.log("aaaaaaaa")
-    fetchProductsThunk()(dispatch)
-    // console.log("depois")
-  })
-
-  const handleClick = () =>{
-    if(!estadoInput){
-      fetchProductsThunk()(dispatch)
-    }
-
-    filterProductsThunk(estadoInput)(dispatch)
-    setEstadoInput('')
-
+type GlobalState = {
+  prod: {
+    products: {
+      id: number;
+      title: string;
+      price: number;
+      description: string;
+      category: string;
+      image: string;
+      rating: {
+        rate: number;
+        count: number;
+      }
+    }[];
+    isFetching: boolean;
+    errorMessage: string;
   }
+}
+
+function App() {
+  const prod = useSelector((state: GlobalState) => state.prod);
+  const dispatch = useDispatch();  
+  const [texto, setTexto] = useState();
+
+  useEffect(() => {   
+
+    dispatch(fetchProductsStarted());
+    fetchProductsThunk()(dispatch);   
+
+  },[dispatch]);
+
+const handlerClick = () => {
+  if (!texto) {
+    fetchProductsThunk()(dispatch);  
+  } else {
+    filterProductsThunk(texto)(dispatch);
+  }
+}
+
+const handlerOnChange = (e: any) =>  {
+  setTexto(e.target.value);
+}
+
 
   return (
     <div className="App">
-      <input type="text" placeholder='Filtro' value={estadoInput} onChange={(e)=> setEstadoInput(e.target.value)} />
-      <button onClick={handleClick}>Pesquisar</button>
-      {isFetching ? <p>Carregando...</p> : <p>Não está carregando</p>}
-      <ol>
-      {products ? products.map((produto:any) =>{
-          return <li key={produto.id}>{produto.title}</li>
-        }) : <></>}
-      </ol>
-      {errorMessage ? <span>{errorMessage}</span> : <></>}
+      <header className="App-header">
+       <input style={{margin: 20}} type="text" value={texto} onChange={handlerOnChange} />
+       <button type="button" onClick={handlerClick}>Pesquisar</button>
+        {prod.errorMessage && <span>Opa deu erro: {prod.errorMessage}</span>}
+        {prod.isFetching && <span>Carregando...</span>}
+        {prod.products && prod.products.map((product: any) => (
+            <div key={product.id}>
+              <p>{product.title}</p>
+            </div>
+          ))}
+      </header>
     </div>
   );
 }
 
-const mapStateToProps = (store: any) => ({
-  products: store.products,
-  isFetching: store.isFetching,
-  errorMessage: store.errorMessage
+
+const mapStateToProps = (state: any) => ({
+ products: state.prod.products,
 });
 
 const mapDispatchToProps = (dispatch: any) => bindActionCreators(
-  { fetchProductsThunk, filterProductsThunk },
-  dispatch,
-);
+    { fetchProductsThunk, filterProductsThunk },
+   dispatch,
+ );
 
 export default connect(mapStateToProps, mapDispatchToProps)(App);
